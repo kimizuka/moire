@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>moire | 干渉縞を鑑賞できるウェブサイト</title>
+    <meta name="viewport" content="width=device-width">
+    <meta name="description" content="干渉縞を鑑賞できるウェブサイト" />
+    <meta name="author" content="君塚史高" />
+    <meta property="og:title" content="moire" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://moire.kimizuka.fm" />
+    <meta property="og:image" content="https://moire.kimizuka.fm/og.png" />
+    <meta property="og:image:width" content="600" />
+    <meta property="og:image:height" content="315" />
+    <meta property="og:site_name" content="moire" />
+    <meta property="og:description" content="干渉縞を鑑賞できるウェブサイト" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="ki_230" />
+    <meta name="twitter:title" content="moire">
+    <meta name="twitter:description" content="干渉縞を鑑賞できるウェブサイト" />
+    <meta name="twitter:image:src" content="https://moire.kimizuka.fm/img/ogp.png" />
+    <link rel="canonical" href="https://moire.kimizuka.fm" />
+    <style>
+      * {
+        margin: 0; padding: 0;
+      }
+
+      canvas {
+        display: block;
+        position: fixed;
+        inset: 0;
+        width: 100dvw; height: 100dvh;
+      }
+
+      .property-name {
+        font-size: 10px;
+      }
+    </style>
+    <script src="./dat.gui.min.js"></script>
+  </head>
+  <body>
+    <canvas></canvas>
+    <script>
+      const gui = new dat.GUI();
+      const canvas = document.querySelector('canvas');
+      const ctx = canvas.getContext('2d');
+
+      let deg = 0;
+      let speed = .1;
+      let rectSize = 0;
+      let punchSize = 2;
+      let isReverse = false;
+      let rectCanvas = getRectCanvas(rectSize, punchSize);
+
+      gui.domElement.style.position = 'fixed';
+      gui.domElement.style.top = '0';
+      gui.domElement.style.right = '-15px';
+      gui.add({ speed }, 'speed', 0, 1)
+         .name('speed')
+         .onChange((value) => {
+           speed = value;
+         });
+      gui.add({ punchSize }, 'punchSize', 1, 10)
+         .name('punch hole size')
+         .onChange((value) => {
+           punchSize = value;
+           rectCanvas = getRectCanvas(rectSize, punchSize);
+         });
+      gui.add({ isReverse }, 'isReverse')
+         .name('reverse')
+         .onChange((value) => {
+           isReverse = value;
+         });
+
+         window.addEventListener('resize', handleResize);
+
+      handleResize();
+      render();
+
+      function handleResize() {
+        rectSize = Math.max(window.innerWidth, window.innerHeight) * 2 * 1.5;
+        rectCanvas = getRectCanvas(rectSize, punchSize);
+      }
+
+      function render() {
+        canvas.width = window.innerWidth * 2;
+        canvas.height = window.innerHeight * 2;
+
+        ctx.drawImage(
+          rectCanvas,
+          canvas.width / 2 - rectCanvas.width / 2,
+          canvas.height / 2 - rectCanvas.height / 2,
+          rectCanvas.width,
+          rectCanvas.height
+        );
+
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((deg * Math.PI) / 180);
+        ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+        ctx.drawImage(
+          rectCanvas,
+          canvas.width / 2 - rectCanvas.width / 2,
+          canvas.height / 2 - rectCanvas.height / 2,
+          rectCanvas.width,
+          rectCanvas.height
+        );
+
+        deg = (deg + speed * (isReverse ? -1 : 1)) % 360;
+        requestAnimationFrame(render);
+      }
+
+      function getRectCanvas(rectSize, punchSize) {
+        const canvas = document.createElement('canvas');
+
+        if (!rectSize || !punchSize) {
+          return canvas;
+        }
+
+        if (getRectCanvas[rectSize] && getRectCanvas[rectSize][punchSize]) {
+          return getRectCanvas[rectSize][punchSize];
+        }
+
+        const ctx = canvas.getContext('2d');
+        const rowLength = 0 | rectSize / (punchSize * 2 * 2);
+        const padding = (rectSize - ((rowLength - 1) * punchSize * 2 * 2 + punchSize * 2)) / 2;
+
+        canvas.width = canvas.height = rectSize;
+
+        for (let i = 0; i < rowLength; i++) {
+          for (let j = 0; j < rowLength; j++) {
+            ctx.save();
+              ctx.beginPath();
+
+              ctx.arc(
+                padding + i * punchSize * 2 * 2 + punchSize,
+                padding + j * punchSize * 2 * 2 + punchSize,
+                punchSize,
+                0,
+                Math.PI * 2,
+                true
+              );
+              ctx.closePath();
+              ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        ctx.save();
+          ctx.globalCompositeOperation = 'source-out';
+          ctx.fillStyle = 'black';
+          ctx.fillRect(0, 0, rectSize, rectSize);
+        ctx.restore();
+
+        getRectCanvas[rectSize] = getRectCanvas[rectSize] || [];
+        getRectCanvas[rectSize][punchSize] = canvas;
+
+        return canvas;
+      }
+    </script>
+  </body>
+</html>
